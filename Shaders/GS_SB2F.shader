@@ -1,4 +1,4 @@
-Shader "VRChatGaussianSplatting/GaussianSplattingSimpleBackToFront"
+﻿Shader "VRChatGaussianSplatting/GaussianSplattingSimpleBackToFront"
 {
     Properties
     {
@@ -77,18 +77,18 @@ Shader "VRChatGaussianSplatting/GaussianSplattingSimpleBackToFront"
     }
     SubShader
     {
-        Tags { "RenderType"="Transparent" "Queue"="Transparent+500" }
+        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Transparent" "Queue"="Transparent+500" }
 
         Pass
         {
             Blend One OneMinusSrcAlpha
             Cull Off
             ZWrite Off
-            CGPROGRAM
+            HLSLPROGRAM
             #define _BACK_TO_FRONT
             #define _FAKE_SRGB
         	#include "GS.cginc"
-            ENDCG
+            ENDHLSL
         }
     }
 }

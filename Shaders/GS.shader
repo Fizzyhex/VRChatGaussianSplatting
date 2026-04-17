@@ -1,4 +1,4 @@
-Shader "VRChatGaussianSplatting/GaussianSplatting"
+﻿Shader "VRChatGaussianSplatting/GaussianSplatting"
 {
     Properties
     {
@@ -77,7 +77,7 @@ Shader "VRChatGaussianSplatting/GaussianSplatting"
     }
     SubShader
     {
-        Tags { "RenderType"="Transparent" "Queue"="Transparent+500" }
+        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Transparent" "Queue"="Transparent+500" }
 
         Pass
         {
@@ -89,9 +89,9 @@ Shader "VRChatGaussianSplatting/GaussianSplatting"
                 Ref 1
                 Comp NotEqual  // skip pixels where alpha mask pass wrote 1
             }
-            CGPROGRAM
+            HLSLPROGRAM
         	#include "GS.cginc"
-            ENDCG
+            ENDHLSL
         }
     }
 }

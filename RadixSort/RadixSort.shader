@@ -1,4 +1,4 @@
-Shader "Misha/RadixSort"
+﻿Shader "Misha/RadixSort"
 {
     Properties {
         _KeyValues("Key Values", 2D) = "white" {}
@@ -11,6 +11,7 @@ Shader "Misha/RadixSort"
     }
     SubShader
     {
+        Tags { "RenderPipeline"="UniversalPipeline" }
         Cull Off
         ZWrite Off
         ZTest Always
@@ -20,7 +21,7 @@ Shader "Misha/RadixSort"
             Cull Off
             ZWrite Off
 
-            CGPROGRAM
+            HLSLPROGRAM
             #pragma vertex   vert
             #pragma fragment frag
             //#pragma enable_d3d11_debug_symbols
@@ -50,7 +51,7 @@ Shader "Misha/RadixSort"
 
                 return count;
             }
-            ENDCG
+            ENDHLSL
         }
 
         // The Graphics API computes the mipmaps of the digit counts (averages), only works up to 2^24 elements due to float precision.
@@ -61,7 +62,7 @@ Shader "Misha/RadixSort"
             Cull Off
             ZWrite Off
 
-            CGPROGRAM
+            HLSLPROGRAM
             #pragma vertex   vert
             #pragma fragment frag
             //#pragma enable_d3d11_debug_symbols
@@ -99,7 +100,7 @@ Shader "Misha/RadixSort"
 
                 return keyValue;
             }
-            ENDCG
+            ENDHLSL
         }
     }
 }

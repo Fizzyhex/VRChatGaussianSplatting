@@ -1,8 +1,8 @@
-Shader "VRChatGaussianSplatting/AlphaDepthMask"
+﻿Shader "VRChatGaussianSplatting/AlphaDepthMask"
 {
     SubShader
     {
-        Tags { "Queue" = "Transparent+500" }
+        Tags { "RenderPipeline"="UniversalPipeline" "Queue" = "Transparent+500" }
         
         GrabPass {}
         Pass
@@ -16,7 +16,7 @@ Shader "VRChatGaussianSplatting/AlphaDepthMask"
                 Comp Always
                 Pass Replace   // write 1 into stencil
             }
-            CGPROGRAM
+            HLSLPROGRAM
             #include "FullscreenCommon.cginc"
             UNITY_DECLARE_SCREENSPACE_TEXTURE(_GrabTexture);
             float4 frag(v2f i) : SV_Target {
@@ -25,7 +25,7 @@ Shader "VRChatGaussianSplatting/AlphaDepthMask"
                 if(col.a < 0.99) discard;
                 return 0.0;
             }
-            ENDCG
+            ENDHLSL
         }
     }
 

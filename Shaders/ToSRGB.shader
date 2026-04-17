@@ -1,8 +1,8 @@
-Shader "VRChatGaussianSplatting/ToSRGB"
+﻿Shader "VRChatGaussianSplatting/ToSRGB"
 {
     SubShader
     {
-        Tags { "Queue" = "Transparent+499" }
+        Tags { "RenderPipeline"="UniversalPipeline" "Queue" = "Transparent+499" }
         
         GrabPass
         {
@@ -14,7 +14,7 @@ Shader "VRChatGaussianSplatting/ToSRGB"
             ZWrite Off
             ZTest Always
             Cull Off
-            CGPROGRAM
+            HLSLPROGRAM
             #include "FullscreenCommon.cginc"
             UNITY_DECLARE_SCREENSPACE_TEXTURE(_LinearBackground); 
             float4 frag(v2f i) : SV_Target {
@@ -22,7 +22,7 @@ Shader "VRChatGaussianSplatting/ToSRGB"
                 fixed4 col = UNITY_SAMPLE_SCREENSPACE_TEXTURE(_LinearBackground, i.uv.xy); 
                 return fixed4(LinearToGammaSpace(col.rgb), 0.0);
             }
-            ENDCG
+            ENDHLSL
         }
     }
 

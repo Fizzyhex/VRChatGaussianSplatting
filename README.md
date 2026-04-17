@@ -4,6 +4,13 @@
 
 Gaussian splatting for VRChat worlds, with runtime sorted rendering, standalone precomputed imports, and automatic editor Scene view sorting.
 
+## Unity URP / non-VRChat migration notes
+
+- Runtime scripts are now standard `MonoBehaviour` scripts (no UdonSharp dependency).
+- Runtime camera sorting uses `Camera.main` and Unity `Graphics.Blit`.
+- Shaders are tagged for `UniversalPipeline`.
+- Legacy grab-pass based color-correction shaders are still present for compatibility, but URP projects may need renderer-feature replacements for exact equivalent behavior.
+
 ## Current Features
 
 - Sorted-only runtime rendering through `GaussianSplatRenderer`

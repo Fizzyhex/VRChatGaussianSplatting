@@ -1,9 +1,8 @@
 using UnityEngine;
-using UdonSharp;
 
 namespace GaussianSplatting
 {
-    public class GaussianSplatObject : UdonSharpBehaviour
+    public class GaussianSplatObject : MonoBehaviour
     {
         [SerializeField] public GameObject sortedObject;
         [SerializeField] public MeshRenderer sortedRenderer;

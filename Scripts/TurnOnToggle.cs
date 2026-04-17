@@ -1,15 +1,10 @@
 ﻿
 using UnityEngine;
-using UdonSharp;
-using VRC.SDKBase;
-using VRC.Udon;
-using VRC.SDK3.Components;
 
 namespace GaussianSplatting
 {
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
-public class TurnOnToggle : UdonSharpBehaviour 
+public class TurnOnToggle : MonoBehaviour
 {   
     [Tooltip("The GameObject that will be enabled when this toggle is activated.")]
     public int enableObjectIndex = 0; // Index of the object to enable in the GaussianSplatRenderer's splatObjects array
@@ -26,7 +21,7 @@ public class TurnOnToggle : UdonSharpBehaviour
         GameObject targetObject = gaussianSplatRenderer.GetObjectByIndex(enableObjectIndex);
         if (targetObject != null)
         {
-            this.InteractionText = targetObject.name;
+            gameObject.name = "Select " + targetObject.name;
         }
     }
 
@@ -37,16 +32,10 @@ public class TurnOnToggle : UdonSharpBehaviour
             return;
         }
 
-        if (Networking.LocalPlayer != null)
-        {
-            Networking.SetOwner(Networking.LocalPlayer, gameObject);
-            Networking.SetOwner(Networking.LocalPlayer, gaussianSplatRenderer.gameObject);
-        }
-
         gaussianSplatRenderer.SelectSplatObject(enableObjectIndex);
     }
 
-    public override void Interact()
+    public void Interact()
     {
         SelectObject();
     }

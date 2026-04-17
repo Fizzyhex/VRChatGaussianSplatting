@@ -1,15 +1,15 @@
-Shader "Hidden/GaussianSplatting/CopyRenderOrder"
+﻿Shader "Hidden/GaussianSplatting/CopyRenderOrder"
 {
     SubShader
     {
-        Tags { "RenderType"="Opaque" "Queue"="Overlay" }
+        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Overlay" }
         Pass
         {
             Cull Off
             ZWrite Off
             ZTest Always
 
-            CGPROGRAM
+            HLSLPROGRAM
             #pragma vertex vert_img
             #pragma fragment frag
 
@@ -21,7 +21,7 @@ Shader "Hidden/GaussianSplatting/CopyRenderOrder"
             {
                 return tex2D(_MainTex, input.uv).r;
             }
-            ENDCG
+            ENDHLSL
         }
     }
     Fallback Off
