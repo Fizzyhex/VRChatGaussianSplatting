@@ -34,17 +34,34 @@ namespace GaussianSplatting.Editor.Utils
             attrs = new List<(string, ElementType)>();
             const int kMaxHeaderLines = 9000;
             bool got_binary_le = false;
+            string currentElement = string.Empty;
             for (int lineIdx = 0; lineIdx < kMaxHeaderLines; ++lineIdx)
             {
                 var line = ReadLine(fs);
-                if (line == "end_header" || line.Length == 0)
+                if (line == "end_header")
                     break;
-                var tokens = line.Split(' ');
+
+                if (line.Length == 0)
+                {
+                    if (fs.Position >= fs.Length)
+                        throw new IOException($"PLY {filePath} read error: reached EOF before end_header");
+                    continue;
+                }
+
+                var tokens = line.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
                 if (tokens.Length == 3 && tokens[0] == "format" && tokens[1] == "binary_little_endian" && tokens[2] == "1.0")
                     got_binary_le = true;
                 if (tokens.Length == 3 && tokens[0] == "element" && tokens[1] == "vertex")
+                {
                     vertexCount = int.Parse(tokens[2]);
-                if (tokens.Length == 3 && tokens[0] == "property")
+                    currentElement = tokens[1];
+                }
+                else if (tokens.Length >= 2 && tokens[0] == "element")
+                {
+                    currentElement = tokens[1];
+                }
+
+                if (currentElement == "vertex" && tokens.Length == 3 && tokens[0] == "property")
                 {
                     ElementType type = tokens[1] switch
                     {
