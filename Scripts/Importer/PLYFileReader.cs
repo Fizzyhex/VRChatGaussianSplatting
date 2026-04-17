@@ -48,7 +48,7 @@ namespace GaussianSplatting.Editor.Utils
                     continue;
                 }
 
-                var tokens = line.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+                var tokens = line.Split(null, StringSplitOptions.RemoveEmptyEntries);
                 if (tokens.Length == 3 && tokens[0] == "format" && tokens[1] == "binary_little_endian" && tokens[2] == "1.0")
                     got_binary_le = true;
                 if (tokens.Length == 3 && tokens[0] == "element" && tokens[1] == "vertex")
