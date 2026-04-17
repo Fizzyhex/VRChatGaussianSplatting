@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 Shader "Unlit/BlackSkybox"
 {
     Properties
@@ -7,9 +7,10 @@ Shader "Unlit/BlackSkybox"
     }
     SubShader
     {
+        Tags { "RenderPipeline"="UniversalPipeline" }
         Pass
         {
-            CGPROGRAM
+            HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
 
@@ -38,7 +39,7 @@ Shader "Unlit/BlackSkybox"
             {
                 return _Color;
             }
-            ENDCG
+            ENDHLSL
         }
     }
 }

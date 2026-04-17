@@ -1,4 +1,4 @@
-Shader "VRChatGaussianSplatting/Warning"
+﻿Shader "VRChatGaussianSplatting/Warning"
 {
     Properties
     {
@@ -6,12 +6,12 @@ Shader "VRChatGaussianSplatting/Warning"
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
+        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" }
         LOD 100
 
         Pass
         {
-            CGPROGRAM
+            HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
             // make fog work
@@ -55,7 +55,7 @@ Shader "VRChatGaussianSplatting/Warning"
                 UNITY_APPLY_FOG(i.fogCoord, col);
                 return col;
             }
-            ENDCG
+            ENDHLSL
         }
     }
 }

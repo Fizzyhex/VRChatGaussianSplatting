@@ -1,12 +1,10 @@
-using UdonSharp;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace GaussianSplatting
 {
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
-public class GaussianSplatRendererUI : UdonSharpBehaviour
+public class GaussianSplatRendererUI : MonoBehaviour
 {
     public GaussianSplatRenderer gaussianSplatRenderer;
     public Text currentSplatText;

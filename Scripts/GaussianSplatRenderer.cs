@@ -1,8 +1,4 @@
-using UnityEngine;
-using UdonSharp;
-using VRC.SDKBase;
-using VRC.SDK3.Rendering;
-using VRC.Udon;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 
@@ -12,18 +8,15 @@ using System.IO;
 using UnityEditor;
 using UnityEditor.Events;
 using System.Collections.Generic;
-using System.Reflection;
 using UnityEngine.Rendering;
-using UdonSharpEditor;
 #endif
 
 namespace GaussianSplatting
 {
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.Continuous)]
-public class GaussianSplatRenderer : UdonSharpBehaviour
+public class GaussianSplatRenderer : MonoBehaviour
 {
-    const int MAX_CAMERA_COUNT = 3; // Screen camera + Photo camera + Mirror camera
+    const int MAX_CAMERA_COUNT = 1;
     private Vector3[] _prevCameraPos;
     private RadixSort _radixSort;
     private MeshRenderer _sortedRenderer;
@@ -31,7 +24,7 @@ public class GaussianSplatRenderer : UdonSharpBehaviour
     private GameObject splatObject;
 
     [Header("Gaussian Splat Object")]
-    [UdonSynced, Tooltip("The index of the currently rendered splat object in the splatObjects array.")]
+    [Tooltip("The index of the currently rendered splat object in the splatObjects array.")]
     public int splatObjectIndex = 0; // Index of the current splat object in the splatObjects array
     [Tooltip("The GameObjects that contain the Gaussian Splat roots.")]
     public GameObject[] splatObjects;
@@ -51,12 +44,12 @@ public class GaussianSplatRenderer : UdonSharpBehaviour
     public RenderTexture splatRenderOrder;
 
     [Tooltip("If true, the material properties will be overridden with the values set in this script. If false, the material properties will be set to their default values.")]
-    [UdonSynced, SerializeField] public bool overrideMaterialProperties = false;
-    [UdonSynced, Range(0, 3)] [SerializeField] int requestedSHBand = 3;
-    [UdonSynced, Range(0.0f, 2.0f)] [SerializeField] public float gaussianScale = 1.0f;
+    [SerializeField] public bool overrideMaterialProperties = false;
+    [Range(0, 3)] [SerializeField] int requestedSHBand = 3;
+    [Range(0.0f, 2.0f)] [SerializeField] public float gaussianScale = 1.0f;
     [Range(0.0f, 3.0f)] [SerializeField] float antiAliasing = 1.0f;
     [Range(0.005f, 0.1f)] [SerializeField] public float alphaCutoff = 0.03f;
-    [UdonSynced, SerializeField] bool useVrcLightVolumes = false;
+    [SerializeField] bool useVrcLightVolumes = false;
     [Range(0.0f, 4.0f)] [SerializeField] float lightVolumeIntensity = 1.0f;
 
     // [Header("Optional Mirror")]
@@ -298,18 +291,10 @@ public class GaussianSplatRenderer : UdonSharpBehaviour
 
     void EnsureLocalOwnership()
     {
-        if (Networking.LocalPlayer != null)
-        {
-            Networking.SetOwner(Networking.LocalPlayer, gameObject);
-        }
     }
 
     void RequestSyncedStateUpdate()
     {
-        if (Networking.LocalPlayer != null)
-        {
-            RequestSerialization();
-        }
     }
 
     public void SelectSplatObject(int index)
@@ -599,15 +584,7 @@ public class GaussianSplatRenderer : UdonSharpBehaviour
 
     void DisableMsaaInGame()
     {
-        if (VRCCameraSettings.ScreenCamera != null)
-        {
-            VRCCameraSettings.ScreenCamera.AllowMSAA = false;
-        }
-
-        if (VRCCameraSettings.PhotoCamera != null)
-        {
-            VRCCameraSettings.PhotoCamera.AllowMSAA = false;
-        }
+        QualitySettings.antiAliasing = 0;
     }
 
     void Start()
@@ -719,7 +696,7 @@ public class GaussianSplatRenderer : UdonSharpBehaviour
         _prevCameraPos[cameraID] = quantizedPos;
         keyValueMat.SetVector("_CameraPos", cameraPos);
         _radixSort.Sort();
-        VRCGraphics.Blit(_radixSort.keyValues0, splatRenderOrder, 0, cameraID);
+        Graphics.Blit(_radixSort.keyValues0, splatRenderOrder);
         return true;
     }
 
@@ -739,9 +716,6 @@ public class GaussianSplatRenderer : UdonSharpBehaviour
         {
             ShowSorted(splatObject);
         }
-
-        VRCCameraSettings photoCam = VRCCameraSettings.PhotoCamera;
-        if (photoCam != null && photoCam.Active) SortCamera(photoCam.Position, 1);
 
         // if (mirror != null && mirror.activeInHierarchy) //Mirror order is currently broken in VRChat
         // {
@@ -765,11 +739,17 @@ public class GaussianSplatRenderer : UdonSharpBehaviour
             return;
         }
 
-        Vector3 screenCamPos = VRCCameraSettings.ScreenCamera.Position;
+        Camera activeCamera = Camera.main;
+        if (activeCamera == null)
+        {
+            return;
+        }
+
+        Vector3 screenCamPos = activeCamera.transform.position;
         SortCameras(screenCamPos);
     }
 
-    public override void OnDeserialization()
+    void OnEnable()
     {
         ResetCameraPositions();
         if (!ApplySelectedSplatObject())
@@ -781,83 +761,9 @@ public class GaussianSplatRenderer : UdonSharpBehaviour
     }
 
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
-    static Type _cachedVrChatUiShapeType;
-
-    static Type FindTypeInLoadedAssemblies(string fullTypeName, string shortTypeName)
-    {
-        Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
-        for (int i = 0; i < assemblies.Length; i++)
-        {
-            Type resolvedType = assemblies[i].GetType(fullTypeName);
-            if (resolvedType != null)
-            {
-                return resolvedType;
-            }
-        }
-
-        for (int i = 0; i < assemblies.Length; i++)
-        {
-            Type[] types;
-            try
-            {
-                types = assemblies[i].GetTypes();
-            }
-            catch (ReflectionTypeLoadException exception)
-            {
-                types = exception.Types;
-            }
-
-            if (types == null)
-            {
-                continue;
-            }
-
-            for (int j = 0; j < types.Length; j++)
-            {
-                Type candidateType = types[j];
-                if (candidateType != null && candidateType.Name == shortTypeName)
-                {
-                    return candidateType;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    static Type GetVrChatUiShapeType()
-    {
-        if (_cachedVrChatUiShapeType != null)
-        {
-            return _cachedVrChatUiShapeType;
-        }
-
-        _cachedVrChatUiShapeType = FindTypeInLoadedAssemblies("VRC.SDK3.Components.VRCUiShape", "VRCUiShape");
-        if (_cachedVrChatUiShapeType == null)
-        {
-            _cachedVrChatUiShapeType = FindTypeInLoadedAssemblies("VRC.SDKBase.VRC_UiShape", "VRC_UiShape");
-        }
-
-        return _cachedVrChatUiShapeType;
-    }
-
     static void TryAddVrChatUiShape(GameObject targetObject)
     {
-        if (targetObject == null)
-        {
-            return;
-        }
-
-        Type vrChatUiShapeType = GetVrChatUiShapeType();
-        if (vrChatUiShapeType == null)
-        {
-            return;
-        }
-
-        if (targetObject.GetComponent(vrChatUiShapeType) == null)
-        {
-            targetObject.AddComponent(vrChatUiShapeType);
-        }
+        // No-op outside VRChat.
     }
 
     static Font GetBuiltinUiFont()
@@ -865,20 +771,10 @@ public class GaussianSplatRenderer : UdonSharpBehaviour
         return Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
     }
 
-    static T AddGeneratedUdonSharpComponent<T>(GameObject targetObject, string undoLabel) where T : UdonSharpBehaviour
+    static T AddGeneratedComponent<T>(GameObject targetObject, string undoLabel) where T : Component
     {
         Undo.RegisterCompleteObjectUndo(targetObject, undoLabel);
-        return targetObject.AddUdonSharpComponent<T>();
-    }
-
-    static UdonBehaviour GetBackingUdonBehaviour(UdonSharpBehaviour proxyBehaviour)
-    {
-        if (proxyBehaviour == null)
-        {
-            return null;
-        }
-
-        return UdonSharpEditorUtility.GetBackingUdonBehaviour(proxyBehaviour);
+        return Undo.AddComponent<T>(targetObject);
     }
 
     static string SanitizeAssetName(string value)
@@ -1025,21 +921,15 @@ public class GaussianSplatRenderer : UdonSharpBehaviour
         EditorUtility.SetDirty(targetTexture);
     }
 
-    static void AddUdonSharpButtonEvent(Button button, UdonSharpBehaviour targetBehaviour, string eventName)
+    static void AddButtonEvent(Button button, MonoBehaviour targetBehaviour, string eventName)
     {
         if (button == null || targetBehaviour == null || string.IsNullOrEmpty(eventName))
         {
             return;
         }
 
-        UdonBehaviour backingBehaviour = GetBackingUdonBehaviour(targetBehaviour);
-        if (backingBehaviour == null)
-        {
-            return;
-        }
-
-        UnityEventTools.AddStringPersistentListener(button.onClick, backingBehaviour.SendCustomEvent, eventName);
-        EditorUtility.SetDirty(backingBehaviour);
+        UnityEventTools.AddStringPersistentListener(button.onClick, targetBehaviour.SendMessage, eventName);
+        EditorUtility.SetDirty(targetBehaviour);
     }
 
     static Material CreateOpaqueBackgroundMaterial()
@@ -1353,7 +1243,7 @@ public class GaussianSplatRenderer : UdonSharpBehaviour
         panelRect.pivot = new Vector2(0.5f, 0.5f);
         panelRect.sizeDelta = new Vector2(1120.0f, 0.0f);
 
-        GaussianSplatRendererUI generatedUi = AddGeneratedUdonSharpComponent<GaussianSplatRendererUI>(canvasObject, "Add Gaussian Splat Renderer UI");
+        GaussianSplatRendererUI generatedUi = AddGeneratedComponent<GaussianSplatRendererUI>(canvasObject, "Add Gaussian Splat Renderer UI");
         generatedUi.gaussianSplatRenderer = this;
 
         GameObject bodyRow = CreateHorizontalGroup("Body Row", panelObject.transform, 18.0f, false);
@@ -1378,8 +1268,8 @@ public class GaussianSplatRenderer : UdonSharpBehaviour
         generatedUi.minSortDistanceText = CreateTextElement("Min Sort Distance Value", minSortDistanceRow.transform, "0", 16, TextAnchor.MiddleCenter, new Color(0.95f, 0.95f, 0.95f, 1.0f));
         SetPreferredWidth(generatedUi.minSortDistanceText.gameObject, 72.0f, 0.0f);
         Button minSortDistanceUpButton = CreateButtonElement("Min Sort Distance Up", minSortDistanceRow.transform, "+", new Color(0.18f, 0.4f, 0.24f, 1.0f), 42.0f, 0.0f);
-        AddUdonSharpButtonEvent(minSortDistanceDownButton, generatedUi, nameof(GaussianSplatRendererUI.DecreaseMinSortDistance));
-        AddUdonSharpButtonEvent(minSortDistanceUpButton, generatedUi, nameof(GaussianSplatRendererUI.IncreaseMinSortDistance));
+        AddButtonEvent(minSortDistanceDownButton, generatedUi, nameof(GaussianSplatRendererUI.DecreaseMinSortDistance));
+        AddButtonEvent(minSortDistanceUpButton, generatedUi, nameof(GaussianSplatRendererUI.IncreaseMinSortDistance));
 
         GameObject maxSortDistanceRow = CreateHorizontalGroup("Max Sort Distance Row", settingsColumn.transform, 8.0f, false);
         Text maxSortDistanceLabel = CreateTextElement("Max Sort Distance Label", maxSortDistanceRow.transform, "Max Sort Dist", 16, TextAnchor.MiddleLeft, Color.white);
@@ -1388,8 +1278,8 @@ public class GaussianSplatRenderer : UdonSharpBehaviour
         generatedUi.maxSortDistanceText = CreateTextElement("Max Sort Distance Value", maxSortDistanceRow.transform, "150", 16, TextAnchor.MiddleCenter, new Color(0.95f, 0.95f, 0.95f, 1.0f));
         SetPreferredWidth(generatedUi.maxSortDistanceText.gameObject, 72.0f, 0.0f);
         Button maxSortDistanceUpButton = CreateButtonElement("Max Sort Distance Up", maxSortDistanceRow.transform, "+", new Color(0.18f, 0.4f, 0.24f, 1.0f), 42.0f, 0.0f);
-        AddUdonSharpButtonEvent(maxSortDistanceDownButton, generatedUi, nameof(GaussianSplatRendererUI.DecreaseMaxSortDistance));
-        AddUdonSharpButtonEvent(maxSortDistanceUpButton, generatedUi, nameof(GaussianSplatRendererUI.IncreaseMaxSortDistance));
+        AddButtonEvent(maxSortDistanceDownButton, generatedUi, nameof(GaussianSplatRendererUI.DecreaseMaxSortDistance));
+        AddButtonEvent(maxSortDistanceUpButton, generatedUi, nameof(GaussianSplatRendererUI.IncreaseMaxSortDistance));
 
         GameObject cameraQuantizationRow = CreateHorizontalGroup("Camera Quantization Row", settingsColumn.transform, 8.0f, false);
         Text cameraQuantizationLabel = CreateTextElement("Camera Quantization Label", cameraQuantizationRow.transform, "Camera Quant", 16, TextAnchor.MiddleLeft, Color.white);
@@ -1398,8 +1288,8 @@ public class GaussianSplatRenderer : UdonSharpBehaviour
         generatedUi.cameraQuantizationText = CreateTextElement("Camera Quantization Value", cameraQuantizationRow.transform, "0.1", 16, TextAnchor.MiddleCenter, new Color(0.95f, 0.95f, 0.95f, 1.0f));
         SetPreferredWidth(generatedUi.cameraQuantizationText.gameObject, 72.0f, 0.0f);
         Button cameraQuantizationUpButton = CreateButtonElement("Camera Quantization Up", cameraQuantizationRow.transform, "+", new Color(0.18f, 0.4f, 0.24f, 1.0f), 42.0f, 0.0f);
-        AddUdonSharpButtonEvent(cameraQuantizationDownButton, generatedUi, nameof(GaussianSplatRendererUI.DecreaseCameraQuantization));
-        AddUdonSharpButtonEvent(cameraQuantizationUpButton, generatedUi, nameof(GaussianSplatRendererUI.IncreaseCameraQuantization));
+        AddButtonEvent(cameraQuantizationDownButton, generatedUi, nameof(GaussianSplatRendererUI.DecreaseCameraQuantization));
+        AddButtonEvent(cameraQuantizationUpButton, generatedUi, nameof(GaussianSplatRendererUI.IncreaseCameraQuantization));
 
         GameObject sortingStepsRow = CreateHorizontalGroup("Sorting Steps Row", settingsColumn.transform, 8.0f, false);
         Text sortingStepsLabel = CreateTextElement("Sorting Steps Label", sortingStepsRow.transform, "Sorting Steps", 16, TextAnchor.MiddleLeft, Color.white);
@@ -1408,15 +1298,15 @@ public class GaussianSplatRenderer : UdonSharpBehaviour
         generatedUi.sortingStepsText = CreateTextElement("Sorting Steps Value", sortingStepsRow.transform, "4", 16, TextAnchor.MiddleCenter, new Color(0.95f, 0.95f, 0.95f, 1.0f));
         SetPreferredWidth(generatedUi.sortingStepsText.gameObject, 72.0f, 0.0f);
         Button sortingStepsUpButton = CreateButtonElement("Sorting Steps Up", sortingStepsRow.transform, "+", new Color(0.18f, 0.4f, 0.24f, 1.0f), 42.0f, 0.0f);
-        AddUdonSharpButtonEvent(sortingStepsDownButton, generatedUi, nameof(GaussianSplatRendererUI.DecreaseSortingSteps));
-        AddUdonSharpButtonEvent(sortingStepsUpButton, generatedUi, nameof(GaussianSplatRendererUI.IncreaseSortingSteps));
+        AddButtonEvent(sortingStepsDownButton, generatedUi, nameof(GaussianSplatRendererUI.DecreaseSortingSteps));
+        AddButtonEvent(sortingStepsUpButton, generatedUi, nameof(GaussianSplatRendererUI.IncreaseSortingSteps));
 
         GameObject alwaysUpdateRow = CreateHorizontalGroup("Sort Every Frame Row", settingsColumn.transform, 8.0f, false);
         Text alwaysUpdateLabel = CreateTextElement("Sort Every Frame Label", alwaysUpdateRow.transform, "Sort every frame", 16, TextAnchor.MiddleLeft, Color.white);
         SetPreferredWidth(alwaysUpdateLabel.gameObject, 210.0f, 1.0f);
         Button alwaysUpdateButton = CreateButtonElement("Sort Every Frame Button", alwaysUpdateRow.transform, "Off", new Color(0.3f, 0.16f, 0.14f, 1.0f), 72.0f, 0.0f);
         generatedUi.alwaysUpdateButton = alwaysUpdateButton;
-        AddUdonSharpButtonEvent(alwaysUpdateButton, generatedUi, nameof(GaussianSplatRendererUI.ToggleAlwaysUpdate));
+        AddButtonEvent(alwaysUpdateButton, generatedUi, nameof(GaussianSplatRendererUI.ToggleAlwaysUpdate));
 
         CreateTextElement("Settings Section", settingsColumn.transform, "Material Settings", 18, TextAnchor.MiddleLeft, Color.white);
 
@@ -1432,7 +1322,7 @@ public class GaussianSplatRenderer : UdonSharpBehaviour
         SetPreferredWidth(vrcLightVolumesLabel.gameObject, 210.0f, 1.0f);
         Button vrcLightVolumesButton = CreateButtonElement("VRC Light Volumes Button", vrcLightVolumesRow.transform, "Off", new Color(0.3f, 0.16f, 0.14f, 1.0f), 72.0f, 0.0f);
         generatedUi.vrcLightVolumesButton = vrcLightVolumesButton;
-        AddUdonSharpButtonEvent(vrcLightVolumesButton, generatedUi, nameof(GaussianSplatRendererUI.ToggleVrcLightVolumes));
+        AddButtonEvent(vrcLightVolumesButton, generatedUi, nameof(GaussianSplatRendererUI.ToggleVrcLightVolumes));
 
         GameObject lightVolumeIntensityRow = CreateHorizontalGroup("Light Volume Intensity Row", settingsColumn.transform, 8.0f, false);
         Text lightVolumeIntensityLabel = CreateTextElement("Light Volume Intensity Label", lightVolumeIntensityRow.transform, "Light Volume Intensity", 16, TextAnchor.MiddleLeft, Color.white);
@@ -1455,8 +1345,8 @@ public class GaussianSplatRenderer : UdonSharpBehaviour
         generatedUi.gaussianScaleText = CreateTextElement("Gaussian Scale Value", gaussianScaleRow.transform, "1", 16, TextAnchor.MiddleCenter, new Color(0.95f, 0.95f, 0.95f, 1.0f));
         SetPreferredWidth(generatedUi.gaussianScaleText.gameObject, 72.0f, 0.0f);
         Button gaussianScaleUpButton = CreateButtonElement("Gaussian Scale Up", gaussianScaleRow.transform, "+", new Color(0.18f, 0.4f, 0.24f, 1.0f), 42.0f, 0.0f);
-        AddUdonSharpButtonEvent(gaussianScaleDownButton, generatedUi, nameof(GaussianSplatRendererUI.DecreaseGaussianScale));
-        AddUdonSharpButtonEvent(gaussianScaleUpButton, generatedUi, nameof(GaussianSplatRendererUI.IncreaseGaussianScale));
+        AddButtonEvent(gaussianScaleDownButton, generatedUi, nameof(GaussianSplatRendererUI.DecreaseGaussianScale));
+        AddButtonEvent(gaussianScaleUpButton, generatedUi, nameof(GaussianSplatRendererUI.IncreaseGaussianScale));
 
         GameObject alphaCutoffRow = CreateHorizontalGroup("Alpha Cutoff Row", settingsColumn.transform, 8.0f, false);
         Text alphaCutoffLabel = CreateTextElement("Alpha Cutoff Label", alphaCutoffRow.transform, "Alpha Cutoff\n(lower = better quality)", 16, TextAnchor.MiddleLeft, Color.white);
@@ -1482,8 +1372,8 @@ public class GaussianSplatRenderer : UdonSharpBehaviour
         Button scrollDownButton = CreateButtonElement("Splat Scroll Down", splatScrollRow.transform, "Down", new Color(0.15f, 0.24f, 0.36f, 1.0f), 96.0f, 0.0f);
         generatedUi.splatScrollUpButton = scrollUpButton;
         generatedUi.splatScrollDownButton = scrollDownButton;
-        AddUdonSharpButtonEvent(scrollUpButton, generatedUi, nameof(GaussianSplatRendererUI.ScrollSplatListUp));
-        AddUdonSharpButtonEvent(scrollDownButton, generatedUi, nameof(GaussianSplatRendererUI.ScrollSplatListDown));
+        AddButtonEvent(scrollUpButton, generatedUi, nameof(GaussianSplatRendererUI.ScrollSplatListUp));
+        AddButtonEvent(scrollDownButton, generatedUi, nameof(GaussianSplatRendererUI.ScrollSplatListDown));
 
         GameObject splatButtonContainer = CreateVerticalGroup("Splat Button Container", splatListPanel.transform, new RectOffset(0, 0, 0, 0), 8.0f, TextAnchor.UpperLeft);
 
@@ -1520,7 +1410,7 @@ public class GaussianSplatRenderer : UdonSharpBehaviour
             Button slotButton = CreateButtonElement("Splat Slot " + slotIndex, splatButtonContainer.transform, "", new Color(0.2f, 0.2f, 0.24f, 1.0f), 0.0f, 1.0f);
             SetPreferredHeight(slotButton.gameObject, splatSlotButtonHeight, 0.0f);
             splatButtons.Add(slotButton);
-            AddUdonSharpButtonEvent(slotButton, generatedUi, slotSelectEventNames[slotIndex]);
+            AddButtonEvent(slotButton, generatedUi, slotSelectEventNames[slotIndex]);
         }
 
 
@@ -1553,11 +1443,6 @@ public class GaussianSplatRenderer : UdonSharpBehaviour
         EditorUtility.SetDirty(canvasObject);
         EditorUtility.SetDirty(this);
         EditorUtility.SetDirty(generatedUi);
-        UdonBehaviour generatedUiBacking = GetBackingUdonBehaviour(generatedUi);
-        if (generatedUiBacking != null)
-        {
-            EditorUtility.SetDirty(generatedUiBacking);
-        }
         Selection.activeGameObject = canvasObject;
     }
 

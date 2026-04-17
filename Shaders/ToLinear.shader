@@ -1,8 +1,8 @@
-Shader "VRChatGaussianSplatting/ToLinear"
+﻿Shader "VRChatGaussianSplatting/ToLinear"
 {
     SubShader
     {
-        Tags { "Queue" = "Transparent+600" }
+        Tags { "RenderPipeline"="UniversalPipeline" "Queue" = "Transparent+600" }
         
         GrabPass
         {
@@ -14,7 +14,7 @@ Shader "VRChatGaussianSplatting/ToLinear"
             ZWrite Off
             ZTest Always
             Cull Off
-            CGPROGRAM
+            HLSLPROGRAM
             #include "FullscreenCommon.cginc"
             UNITY_DECLARE_SCREENSPACE_TEXTURE(_SRGBBackground); 
             UNITY_DECLARE_SCREENSPACE_TEXTURE(_LinearBackground); 
@@ -29,7 +29,7 @@ Shader "VRChatGaussianSplatting/ToLinear"
                 colPostSplat.rgb = GammaToLinearSpace(colPostSplat.rgb);
                 return colPostSplat;
             }
-            ENDCG
+            ENDHLSL
         }
     }
 

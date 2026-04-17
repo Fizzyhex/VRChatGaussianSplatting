@@ -1,4 +1,4 @@
-Shader "VRChatGaussianSplatting/ComputeKeyValue" {
+﻿Shader "VRChatGaussianSplatting/ComputeKeyValue" {
     Properties {
         [HideInInspector] _GS_Positions ("Means", 2D) = "" {}
         [HideInInspector] _CameraPos ("Camera Position", Vector) = (0, 0, 0, 0)
@@ -8,13 +8,13 @@ Shader "VRChatGaussianSplatting/ComputeKeyValue" {
         _CameraPosQuantization ("Camera Position Quantization", Range(0, 0.1)) = 0.01
     }
     SubShader {
-        Tags { "RenderType"="Opaque" "Queue"="Overlay" }
+        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Overlay" }
         Pass {
             ZTest Always
             Cull Off
             ZWrite Off
 
-            CGPROGRAM
+            HLSLPROGRAM
             #pragma vertex   vert
             #pragma fragment frag
 
@@ -47,7 +47,7 @@ Shader "VRChatGaussianSplatting/ComputeKeyValue" {
                 if (index >= _ElementCount) discard;
                 return float2(index, ComputeD(index));
             }
-            ENDCG
+            ENDHLSL
         }
     }
     Fallback Off

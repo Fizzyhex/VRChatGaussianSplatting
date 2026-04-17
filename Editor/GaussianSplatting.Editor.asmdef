@@ -3,8 +3,7 @@
     "rootNamespace": "",
     "references": [
         "GaussianSplatting",
-        "RadixSort",
-        "UdonSharp.Runtime"
+        "RadixSort"
     ],
     "includePlatforms": [
         "Editor"

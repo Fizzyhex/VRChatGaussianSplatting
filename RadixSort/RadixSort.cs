@@ -1,10 +1,6 @@
-﻿using UdonSharp;
-using UnityEngine;
-using VRC.SDKBase;
-using VRC.Udon;
+﻿using UnityEngine;
 
-[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
-public class RadixSort : UdonSharpBehaviour
+public class RadixSort : MonoBehaviour
 {
     [SerializeField] public Material computeKeyValues;
     [SerializeField] public Material radixSort;
@@ -25,7 +21,7 @@ public class RadixSort : UdonSharpBehaviour
         setStaticUniforms();
 
         // 1. Evaluate key values
-        VRCGraphics.Blit(null, keyValues0, computeKeyValues);
+        Graphics.Blit(null, keyValues0, computeKeyValues);
 
         radixSort.SetTexture("_PrefixSums", prefixSums);
 
@@ -35,8 +31,8 @@ public class RadixSort : UdonSharpBehaviour
             radixSort.SetTexture("_KeyValues", keyValues0);
             radixSort.SetInt("_CurrentBit", bit);
 
-            VRCGraphics.Blit(null, prefixSums, radixSort, 0);
-            VRCGraphics.Blit(null, keyValues1, radixSort, 1);
+            Graphics.Blit(null, prefixSums, radixSort, 0);
+            Graphics.Blit(null, keyValues1, radixSort, 1);
 
             // Ping-pong the buffers
             RenderTexture temp = keyValues0;
@@ -54,7 +50,14 @@ public class RadixSort : UdonSharpBehaviour
         int _OptimalImageSizeX = 1 << _OptimalImageSizeLog2X;
         int _OptimalImageSizeY = 1 << _OptimalImageSizeLog2Y;
 
-        if(keyValues0 == null || keyValues0.width < _OptimalImageSizeLog2X || keyValues0.height < _OptimalImageSizeLog2Y) {
+        if (keyValues0 == null)
+        {
+            Debug.LogError("RadixSort: keyValues0 is not assigned.");
+            return;
+        }
+
+        if (keyValues0.width < _OptimalImageSizeX || keyValues0.height < _OptimalImageSizeY)
+        {
             Debug.LogError($"RadixSort: Texture size ({keyValues0.width}x{keyValues0.height}) is smaller than required ({_OptimalImageSizeX}x{_OptimalImageSizeY}). Please resize the textures.");
             return;
         }
